@@ -1,0 +1,19 @@
+name:            cmdargs-help
+version:         0.1
+license:         BSD3
+author:          Greg Weber <greg@gregweber.info>
+maintainer:      Greg Weber <greg@gregweber.info>
+synopsis:        generate command line arguments from a --help output
+description:     generate command line arguments from a --help output
+
+stability:       Stable
+cabal-version:   >= 1.6
+build-type:      Simple
+homepage:        http://eatnutrients.com
+
+library
+  build-depends:   base >= 0.4
+                 , containers
+                 , cmdargs
+                 , parsec == 3.*
+  exposed-modules: System.Console.CmdArgs.Help
