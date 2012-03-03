@@ -1,3 +1,5 @@
+{-# LANGUAGE QuasiQuotes #-}
+import System.Console.CmdArgs.Help
 
 main = do
   [cmdArgsHelp|
@@ -16,6 +18,8 @@ sample hello [OPTIONS]
 sample goodbye [OPTIONS]
 |]
 
+{-
   hello = Hello{whom = def}
   goodbye = Goodbye
   print =<< cmdArgs (modes [hello, goodbye])
+  -}

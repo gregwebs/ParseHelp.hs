@@ -1,100 +1,146 @@
+{-# LANGUAGE OverloadedStrings #-}
+{-# OPTIONS_GHC -fno-warn-missing-fields #-}
 module  System.Console.CmdArgs.Help where
 
-import Text.ParserCombinators.Parsec
+import Data.Attoparsec.Text
+import Language.Haskell.TH.Quote (QuasiQuoter (..))
 import Data.Char (toUpper)
+import Control.Applicative ((<|>))
+import Data.Text (Text, unpack, pack)
+import qualified Data.Text as T
 
 data ParsedFlag = ParsedFlag {
    parsedFlagShort       :: Maybe Char, 
-   parsedFlagLong        :: Maybe String,
-   parsedFlagDescription :: Maybe String
+   parsedFlagLong        :: Maybe Text,
+   parsedFlagDescription :: Maybe Text
  } deriving Show
 
-type ParsedMode = (String, -- ^ program name
-                   String, -- ^ mode name
+type ParsedMode = (Text, -- ^ program name
+                   Text, -- ^ mode name
                   [ParsedFlag])
-type ParsedCommonMode = (String, [ParsedFlag]) -- no mode name
+type ParsedCommonMode = (Text, [ParsedFlag]) -- no mode name
 
-parseHelp :: String -> Either ParseError (Maybe String,           -- ^ program description
-                                          Maybe ParsedCommonMode,
-                                          [ParsedMode])
-parseHelp input = parse commandArgs "(unknown)" input
+cmdArgsHelp :: QuasiQuoter
+cmdArgsHelp = QuasiQuoter { quoteExp = converter }
+
+capitalize t | T.null t = t
+             | otherwise = T.cons (toUpper $ T.head t) (T.tail t)
+{-
+("sample",Just "\nThe sample program",[ParsedFlag {parsedFlagShort = Just '?', parsedFlagLong = Just "help", parsedFlagDescription = Just "       Display help message"},ParsedFlag {parsedFlagShort = Just 'V', parsedFlagLong = Just "version", parsedFlagDescription = Just "    Print version information"}],[])
+-}
+converter s =
+  case parseHelp $ pack s of
+    Left e -> error $ show e
+    Right pHelp ->
+      let (recordName, Just summary, common_flags, mode_flags) = prepareParsedHelp pHelp
+      in  error $ unpack (capitalize recordName) ++ "{}[" ++ "] += summary " ++ unpack summary
+
+parseHelp :: Text -> Either String (Maybe Text,           -- ^ program description
+                                    Maybe ParsedCommonMode,
+                                    [ParsedMode])
+parseHelp input = parseOnly commandArgs input
   where
     commandArgs = do
-      description <- maybeManyTill anyChar (try blankLines)
-      blankLines
-      common <- optionMaybe (try commonInvocation)
-      modes <- many modeInvocation
-      return (description, common, modes)
+      description <- maybeManyTill anyChar blankLine
+      optional blankLines
+      common <- optionMaybe commonInvocation
+      optional blankLines
+      -- modes <- many modeInvocation
+      return (description, common, [])
+      -- return (description, common, modes)
       where
+        spaces = skipSpace
         commonInvocation = do
           -- sample [OPTIONS]
-          name <- progName
-          blankLines
+          (name,Nothing) <- progName
+          optional blankLines
+          spaces
           -- Common Flags
-          optionMaybe $ (many1 space) >> try (many letter >> skipMany1 space) >> optionallyCapitalized "flags"
-          blankLines
+          optional $ takeWhile1 (notInClass "-\r\n") >> eol'
+          spaces
+          optional blankLines
           opts <- flags
           return (name, opts)
 
         modeInvocation = do
-          name <- progName
-          mode <- many1 notSpace
-          blankLines
-          opts <- flags
-          return (name, mode, opts)
+          (name, mmode) <- progName
+          case mmode of
+            Nothing -> fail $ "no mode found, just: " ++ unpack name
+            Just mode -> do
+              optional blankLines
+              opts <- flags
+              return (name, mode, opts)
+
+        betweenChars start end = do
+          char start
+          r <- many1 $ notChar end
+          char end
+          return r
+
+        progName = do
+          t <- takeWhile1 notSpace
+          spaces
+          m <- optionMaybe $ takeWhile1 (notInClass $ '[':whiteSpaceChars)
+          spaces
+          _ <- betweenChars '[' ']'
+          return (t,m)
+
+        whiteSpaceChars = " \v\f\t\r\n"
+        notSpace = notInClass whiteSpaceChars
 
         maybeManyTill p stop = do
           r <- manyTill p stop
-          return $ if r == [] then Nothing else Just r
+          return $ if r == [] then Nothing else Just $ pack r
 
-        blankLines = eol >> many1 blankLine
-          where
-            blankLine = many space >> eol
+        blankLines = many1 blankLine >> return ()
+        blankLine = eol >> eol
 
-        eol = try (string "\r\n")
-          <|> string "\n"
-          <|> string "\r"
-          <?> "expected end of line"
+        eol' = eol >> return ()
 
+        eol = endOfLine
+
+        optional = option ()
+
+{-
         optionallyCapitalized (s:str) = ciChar s >> string str
           where
             ciChar c = char c <|> char (toUpper c)
+            -}
 
-        notSpace = noneOf " \v\f\t\r\n"
 
-        progName = do
-          t <- many1 notSpace
-          skipMany1 space
-          _ <- between (char '[') (char ']') (noneOf "]")
-          return t
+        restOfLine = manyTill anyChar eol
+        showRest = do
+          rest <- restOfLine
+          error $ "rest: " ++ (show rest)
 
-        flags = endBy flag eol
+        optionMaybe p = option Nothing $ (fmap Just) p
+
+        flags = many1 flag
           where
             flag = do
-              skipMany1 spaces
-              s <- optionMaybe shortFlag
-              skipMany1 spaces
-              l <- optionMaybe longFlag
               spaces
-              case (s,l) of
-                (Nothing, Nothing) -> error "parse error: no flags found"
-                _ -> return ()
-              d <- maybeManyTill anyChar eol
-              blankLines
-              return $ ParsedFlag s l d
+              ms <- optionMaybe shortFlag
+              spaces
+              ml <- optionMaybe longFlag
+              case (ms, ml) of
+                (Nothing, Nothing) -> fail "expected flags"
+                _ -> do
+                  d <- optionMaybe (takeTill $ inClass "\r\n")
+                  return $ ParsedFlag ms (fmap fst ml) d
               where
                 shortFlag = do
                   _ <- char '-'
-                  short <- alphaNum
-                  return short
+                  satisfy notSpace
 
                 longFlag = do
                   _ <- string "--"
-                  long <- many1 (notSpace <|> char '=')
-                  _ <- optionMaybe $ char '=' >> notSpace
-                  return long
+                  long <- takeWhile1 (notInClass $ '=':whiteSpaceChars)
+                  def <- optionMaybe $ char '=' >> takeWhile1 notSpace
+                  return (long, def)
 
-prepareParsedHelp :: (Maybe String, Maybe ParsedCommonMode, [ParsedMode]) -> (String, Maybe String, [ParsedFlag], [(String, [ParsedFlag])])
+prepareParsedHelp :: (Maybe Text, Maybe ParsedCommonMode, [ParsedMode])
+                  -> (Text, Maybe Text, [ParsedFlag], [(Text, [ParsedFlag])])
+prepareParsedHelp (_, Nothing, []) = error "No command flags found"
 prepareParsedHelp (description, mCommon, parsedModes) =
   let (name, common) = case mCommon of
                         Nothing                  -> (fst3 $ head parsedModes, defaultCommonFlags)
@@ -103,9 +149,9 @@ prepareParsedHelp (description, mCommon, parsedModes) =
      in (name, description, common, modes)
   where
     fst3 (x,y,z) = x
-    checkMode :: String -> (String, String, [ParsedFlag]) -> (String, [ParsedFlag])
+    checkMode :: Text -> (Text, Text, [ParsedFlag]) -> (Text, [ParsedFlag])
     checkMode commonProgName (progName, mode, flags) =
-      if progName /= commonProgName then error $ "inconsistent program name: expected "++commonProgName++", got "++progName
+      if progName /= commonProgName then error $ "inconsistent program name: expected "++unpack commonProgName++", got "++unpack progName
         else (mode, flags)
 
     defaultCommonFlags = [
@@ -113,10 +159,6 @@ prepareParsedHelp (description, mCommon, parsedModes) =
      , ParsedFlag (Just 'V') (Just "version") (Just "Print version information")
      ]
 
-main = do
-  case parseHelp "help" of
-    Left e -> print e
-    Right pHelp -> putStrLn . show $ prepareParsedHelp pHelp
   -- makeCmdArgs $ prepareParsedHelp parseHelp
 
 

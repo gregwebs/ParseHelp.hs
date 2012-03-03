@@ -15,5 +15,5 @@ library
   build-depends:   base >= 0.4
                  , containers
                  , cmdargs
-                 , parsec == 3.*
+                 , attoparsec == 0.10.*
   exposed-modules: System.Console.CmdArgs.Help
