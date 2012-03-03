@@ -1,13 +1,13 @@
 {-# LANGUAGE OverloadedStrings #-}
-{-# OPTIONS_GHC -fno-warn-missing-fields #-}
-module  System.Console.CmdArgs.Help where
+module  System.Console.ParseHelp (
+  parseHelp
+) where
 
 import Data.Attoparsec.Text
-import Language.Haskell.TH.Quote (QuasiQuoter (..))
-import Data.Char (toUpper)
 import Control.Applicative ((<|>))
 import Data.Text (Text, unpack, pack)
 import qualified Data.Text as T
+import Data.Char (toUpper)
 
 data ParsedFlag = ParsedFlag {
    parsedFlagShort       :: Maybe Char, 
@@ -20,25 +20,16 @@ type ParsedMode = (Text, -- ^ program name
                   [ParsedFlag])
 type ParsedCommonMode = (Text, [ParsedFlag]) -- no mode name
 
-cmdArgsHelp :: QuasiQuoter
-cmdArgsHelp = QuasiQuoter { quoteExp = converter }
 
-capitalize t | T.null t = t
-             | otherwise = T.cons (toUpper $ T.head t) (T.tail t)
-{-
-("sample",Just "\nThe sample program",[ParsedFlag {parsedFlagShort = Just '?', parsedFlagLong = Just "help", parsedFlagDescription = Just "       Display help message"},ParsedFlag {parsedFlagShort = Just 'V', parsedFlagLong = Just "version", parsedFlagDescription = Just "    Print version information"}],[])
--}
-converter s =
-  case parseHelp $ pack s of
-    Left e -> error $ show e
-    Right pHelp ->
-      let (recordName, Just summary, common_flags, mode_flags) = prepareParsedHelp pHelp
-      in  error $ unpack (capitalize recordName) ++ "{}[" ++ "] += summary " ++ unpack summary
+parseHelp s =
+  case attoParser $ pack s of
+    Left e -> Left e
+    Right pHelp -> Right $ prepareParsedHelp pHelp
 
-parseHelp :: Text -> Either String (Maybe Text,           -- ^ program description
+attoParser :: Text -> Either String (Maybe Text,           -- ^ program description
                                     Maybe ParsedCommonMode,
                                     [ParsedMode])
-parseHelp input = parseOnly commandArgs input
+attoParser input = parseOnly commandArgs input
   where
     commandArgs = do
       description <- maybeManyTill anyChar blankLine
@@ -139,15 +130,18 @@ parseHelp input = parseOnly commandArgs input
                   return (long, def)
 
 prepareParsedHelp :: (Maybe Text, Maybe ParsedCommonMode, [ParsedMode])
-                  -> (Text, Maybe Text, [ParsedFlag], [(Text, [ParsedFlag])])
+                  -> (String, Maybe Text, [ParsedFlag], [(Text, [ParsedFlag])])
 prepareParsedHelp (_, Nothing, []) = error "No command flags found"
 prepareParsedHelp (description, mCommon, parsedModes) =
   let (name, common) = case mCommon of
                         Nothing                  -> (fst3 $ head parsedModes, defaultCommonFlags)
                         Just (commonName, flags) -> (commonName, flags)
   in let modes = map (checkMode name) parsedModes
-     in (name, description, common, modes)
+     in (capitalize $ unpack name, description, common, modes)
   where
+    capitalize [] = []
+    capitalize (c:cs) = toUpper c : cs
+
     fst3 (x,y,z) = x
     checkMode :: Text -> (Text, Text, [ParsedFlag]) -> (Text, [ParsedFlag])
     checkMode commonProgName (progName, mode, flags) =

@@ -16,4 +16,4 @@ library
                  , containers
                  , cmdargs
                  , attoparsec == 0.10.*
-  exposed-modules: System.Console.CmdArgs.Help
+  exposed-modules: System.Console.ParseHelp

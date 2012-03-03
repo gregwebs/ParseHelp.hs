@@ -1,8 +1,9 @@
 {-# LANGUAGE QuasiQuotes #-}
-import System.Console.CmdArgs.Help
+import System.Console.CmdArgs.FromHelp
+import System.Console.CmdArgs.Explicit
 
-main = do
-  [cmdArgsHelp|
+main :: IO ()
+main = print =<< processArgs [cmdArgsHelp|
 The sample program
 
 sample [OPTIONS]
