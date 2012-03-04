@@ -1,19 +1,24 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TemplateHaskell #-}
 module  System.Console.ParseHelp (
-  parseHelp
+  parseHelp, ParsedHelp(..), ParsedFlag(..)
 ) where
 
 import Data.Attoparsec.Text
-import Control.Applicative ((<|>))
+import Control.Applicative ((<|>), many)
 import Data.Text (Text, unpack, pack)
 import qualified Data.Text as T
-import Data.Char (toUpper)
+import Language.Haskell.TH.Lift
+import Prelude hiding (takeWhile)
 
+instance Lift Text where lift = lift . unpack
 data ParsedFlag = ParsedFlag {
    parsedFlagShort       :: Maybe Char, 
    parsedFlagLong        :: Maybe Text,
+   parsedFlagType        :: Maybe Text,
    parsedFlagDescription :: Maybe Text
- } deriving Show
+ } deriving (Show)
+deriveLift ''ParsedFlag
 
 type ParsedMode = (Text, -- ^ program name
                    Text, -- ^ mode name
@@ -21,6 +26,7 @@ type ParsedMode = (Text, -- ^ program name
 type ParsedCommonMode = (Text, [ParsedFlag]) -- no mode name
 
 
+parseHelp :: String -> Either String ParsedHelp
 parseHelp s =
   case attoParser $ pack s of
     Left e -> Left e
@@ -36,9 +42,8 @@ attoParser input = parseOnly commandArgs input
       optional blankLines
       common <- optionMaybe commonInvocation
       optional blankLines
-      -- modes <- many modeInvocation
-      return (description, common, [])
-      -- return (description, common, modes)
+      modes <- many modeInvocation
+      return (description, common, modes)
       where
         spaces = skipSpace
         commonInvocation = do
@@ -64,7 +69,7 @@ attoParser input = parseOnly commandArgs input
 
         betweenChars start end = do
           char start
-          r <- many1 $ notChar end
+          r <- takeWhile1 (/= end)
           char end
           return r
 
@@ -75,6 +80,30 @@ attoParser input = parseOnly commandArgs input
           spaces
           _ <- betweenChars '[' ']'
           return (t,m)
+
+        maybeText = fmap (\t -> if T.null t then Nothing else Just t)
+        flags = many1 flag
+          where
+            flag = do
+              spaces
+              ms <- optionMaybe shortFlag
+              spaces
+              ml <- optionMaybe longFlag
+              d <- maybeText (takeTill $ inClass "\r\n")
+              case (ms, ml) of
+                (Nothing, Nothing) -> fail "expected flags"
+                (_, Just (long,typ)) -> return $ ParsedFlag ms (Just long) typ d
+                (_, Nothing) ->         return $ ParsedFlag ms Nothing Nothing d
+              where
+                shortFlag = do
+                  _ <- char '-'
+                  satisfy notSpace
+
+                longFlag = do
+                  _ <- string "--"
+                  long <- takeWhile1 (notInClass $ '=':whiteSpaceChars)
+                  def <- optionMaybe $ char '=' >> takeWhile1 notSpace
+                  return (long, def)
 
         whiteSpaceChars = " \v\f\t\r\n"
         notSpace = notInClass whiteSpaceChars
@@ -87,61 +116,28 @@ attoParser input = parseOnly commandArgs input
         blankLine = eol >> eol
 
         eol' = eol >> return ()
-
         eol = endOfLine
 
         optional = option ()
 
-{-
-        optionallyCapitalized (s:str) = ciChar s >> string str
-          where
-            ciChar c = char c <|> char (toUpper c)
-            -}
-
-
-        restOfLine = manyTill anyChar eol
         showRest = do
           rest <- restOfLine
           error $ "rest: " ++ (show rest)
+        restOfLine = manyTill anyChar eol
 
         optionMaybe p = option Nothing $ (fmap Just) p
 
-        flags = many1 flag
-          where
-            flag = do
-              spaces
-              ms <- optionMaybe shortFlag
-              spaces
-              ml <- optionMaybe longFlag
-              case (ms, ml) of
-                (Nothing, Nothing) -> fail "expected flags"
-                _ -> do
-                  d <- optionMaybe (takeTill $ inClass "\r\n")
-                  return $ ParsedFlag ms (fmap fst ml) d
-              where
-                shortFlag = do
-                  _ <- char '-'
-                  satisfy notSpace
-
-                longFlag = do
-                  _ <- string "--"
-                  long <- takeWhile1 (notInClass $ '=':whiteSpaceChars)
-                  def <- optionMaybe $ char '=' >> takeWhile1 notSpace
-                  return (long, def)
-
+type ParsedHelp = (Text, Maybe Text, [ParsedFlag], [(Text, [ParsedFlag])])
 prepareParsedHelp :: (Maybe Text, Maybe ParsedCommonMode, [ParsedMode])
-                  -> (String, Maybe Text, [ParsedFlag], [(Text, [ParsedFlag])])
+                  -> ParsedHelp
 prepareParsedHelp (_, Nothing, []) = error "No command flags found"
 prepareParsedHelp (description, mCommon, parsedModes) =
   let (name, common) = case mCommon of
                         Nothing                  -> (fst3 $ head parsedModes, defaultCommonFlags)
                         Just (commonName, flags) -> (commonName, flags)
   in let modes = map (checkMode name) parsedModes
-     in (capitalize $ unpack name, description, common, modes)
+     in (name, description, common, modes)
   where
-    capitalize [] = []
-    capitalize (c:cs) = toUpper c : cs
-
     fst3 (x,y,z) = x
     checkMode :: Text -> (Text, Text, [ParsedFlag]) -> (Text, [ParsedFlag])
     checkMode commonProgName (progName, mode, flags) =
@@ -149,8 +145,8 @@ prepareParsedHelp (description, mCommon, parsedModes) =
         else (mode, flags)
 
     defaultCommonFlags = [
-       ParsedFlag (Just '?') (Just "help") (Just "Display help message")
-     , ParsedFlag (Just 'V') (Just "version") (Just "Print version information")
+       ParsedFlag (Just '?') (Just $ pack "help") Nothing (Just $ pack "Display help message")
+     , ParsedFlag (Just 'V') (Just $ pack "version") Nothing (Just $ pack "Print version information")
      ]
 
   -- makeCmdArgs $ prepareParsedHelp parseHelp

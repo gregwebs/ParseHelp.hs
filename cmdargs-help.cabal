@@ -9,11 +9,13 @@ description:     generate command line arguments from a --help output
 stability:       Stable
 cabal-version:   >= 1.6
 build-type:      Simple
-homepage:        http://eatnutrients.com
+homepage:        http://github.com/gregwebs/cmdargs-help
 
 library
   build-depends:   base >= 0.4
                  , containers
                  , cmdargs
                  , attoparsec == 0.10.*
+                 , th-lift
+                 , text
   exposed-modules: System.Console.ParseHelp

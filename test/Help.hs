@@ -1,10 +1,18 @@
 {-# LANGUAGE QuasiQuotes #-}
+{-# LANGUAGE TemplateHaskell, OverloadedStrings, DeriveDataTypeable #-}
 import System.Console.CmdArgs.FromHelp
-import System.Console.CmdArgs.Explicit
+import System.Console.CmdArgs hiding (cmdArgsHelp)
 
+{-printHelp :: Annotate Ann -> IO ()-}
+{-printHelp a = print =<< (cmdArgs_ a :: IO FromHelpArgs)-}
+
+{-
 main :: IO ()
 main = print =<< processArgs [cmdArgsHelp|
-The sample program
+-}
+
+mkCmdArgs [fromHelp|
+  The sample program
 
 sample [OPTIONS]
 
@@ -16,8 +24,15 @@ sample hello [OPTIONS]
 
   -w --whom=ITEM
 
+
 sample goodbye [OPTIONS]
 |]
+
+main :: IO ()
+main = do
+  print defaultSample
+  print defaultHello
+  print =<< cmdArgs (modes [defaultSample, defaultHello])
 
 {-
   hello = Hello{whom = def}
