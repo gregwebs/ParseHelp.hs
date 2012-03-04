@@ -1,14 +1,10 @@
-A friendlier interface to the CmdArgs haskell library
+A friendlier interface to command line parsing.
 
-When using the CmdArgs library, one specifieds command line arguments in haskell.
+You write out the help contents for your command line, and this generates a command line parser for you.
+
+Currently there is only a CmdArgs backend, but it could be made to work with any command line parser.
+Normally when using the CmdArgs library, one specifieds command line arguments in Haskell code.
 Among other things, this automatically generates a --help output.
+So now we are just going about this backwards.
 
-The goal of this library is to allow you to instead start by writing the --help output,
-and then parse that back to a CmdArgs data structure.
-
-
-Status: The help parser compiles, but isn't tested
-
-TODO:
-* test help parser
-* convert parsed data structure into CmdArgs data structure
+Status: All works, except for a pesky run time crash!

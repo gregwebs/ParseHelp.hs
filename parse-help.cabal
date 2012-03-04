@@ -14,7 +14,7 @@ homepage:        http://github.com/gregwebs/cmdargs-help
 library
   build-depends:   base >= 0.4
                  , containers
-                 , cmdargs
+                 , data-default
                  , attoparsec == 0.10.*
                  , th-lift
                  , text

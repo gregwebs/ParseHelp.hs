@@ -11,8 +11,10 @@ import Language.Haskell.TH.Quote (QuasiQuoter (..))
 import Language.Haskell.TH.Syntax
 import Data.Text (Text, unpack, pack)
 import qualified Data.Text as T
-import System.Console.CmdArgs.Implicit hiding (cmdArgsHelp)
 import Data.Char (toUpper)
+import Data.Typeable (Typeable)
+import Data.Data (Data)
+import Data.Default (Default(..), def)
 
 fromHelp :: QuasiQuoter
 fromHelp = QuasiQuoter { quoteExp = lift . parseHelp }
