@@ -48,24 +48,23 @@ attoParser input = parseOnly commandArgs input
         spaces = skipSpace
         commonInvocation = do
           -- sample [OPTIONS]
-          (name,Nothing) <- progName
+          name <- commonProgName
           optional blankLines
           spaces
-          -- Common Flags
-          optional $ takeWhile1 (notInClass "-\r\n") >> eol'
+          -- optional blankLines
+          -- optional $ takeWhile (notInClass "\r\n") >> eol'
+          optional blankLines
+          optional $ string "Common flags" >> takeWhile (notInClass "-\r\n") >> eol'
           spaces
           optional blankLines
           opts <- flags
           return (name, opts)
 
         modeInvocation = do
-          (name, mmode) <- progName
-          case mmode of
-            Nothing -> fail $ "no mode found, just: " ++ unpack name
-            Just mode -> do
-              optional blankLines
-              opts <- flags
-              return (name, mode, opts)
+          (name, mode) <- progName
+          optional blankLines
+          opts <- flags
+          return (name, mode, opts)
 
         betweenChars start end = do
           char start
@@ -73,12 +72,27 @@ attoParser input = parseOnly commandArgs input
           char end
           return r
 
-        progName = do
+        bracketed = betweenChars '[' ']'
+
+        commonProgName = do
+          spaces
           t <- takeWhile1 notSpace
           spaces
-          m <- optionMaybe $ takeWhile1 (notInClass $ '[':whiteSpaceChars)
+          optional $ (bracketed <|> takeWhile1 notBracketed) >> return ()
           spaces
-          _ <- betweenChars '[' ']'
+          optional $ string "..." >> return ()
+          spaces
+          _ <- bracketed
+          return t
+
+        notBracketed = notInClass $ '[':whiteSpaceChars
+        progName = do
+          spaces
+          t <- takeWhile1 notSpace
+          spaces
+          m <- takeWhile1 notBracketed
+          spaces
+          _ <- bracketed
           return (t,m)
 
         maybeText = fmap (\t -> if T.null t then Nothing else Just t)

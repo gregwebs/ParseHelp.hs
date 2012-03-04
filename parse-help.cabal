@@ -18,4 +18,12 @@ library
                  , attoparsec == 0.10.*
                  , th-lift
                  , text
+                 , file-location
+                 , template-haskell
   exposed-modules: System.Console.ParseHelp
+
+test-suite test
+    type:          exitcode-stdio-1.0
+    main-is:       Help.hs
+    hs-source-dirs: ., test
+    build-depends: cmdargs

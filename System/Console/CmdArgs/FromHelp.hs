@@ -15,6 +15,8 @@ import Data.Char (toUpper)
 import Data.Typeable (Typeable)
 import Data.Data (Data)
 import Data.Default (Default(..), def)
+import FileLocation (debug)
+import Data.List (nubBy)
 
 fromHelp :: QuasiQuoter
 fromHelp = QuasiQuoter { quoteExp = lift . parseHelp }
@@ -25,30 +27,36 @@ data FromHelpArgs = FromHelpArgs {hello::String} deriving (Show, Data, Typeable)
 instance Default Text where def = T.empty
 
 mkCmdArgs :: Either String ParsedHelp -> Q [Dec]
-mkCmdArgs s = do
-  qRunIO $ print s
+mkCmdArgs s =
   case s of
     Left e -> error $ show e
     Right (progName, mSummary, common_flags, mode_flags) -> do
       f <- [| def |]
-      return $
-        mkDataDec (capitalize $ unpack progName)
-          (cycle [f]) $ (progName, common_flags):mode_flags
+      return $ mkDataDec
+        (cycle [f]) (progName, common_flags) mode_flags
   where
-    mkDataDec :: String -> [Exp] -> [(Text, [ParsedFlag])] -> [Dec]
-    mkDataDec recordType defaults modes =
-      [ DataD [] (mkName recordType) []
-          (map mkRecord modes)
+    mkDataDec :: [Exp] -> (Text, [ParsedFlag]) -> [(Text, [ParsedFlag])] -> [Dec]
+    mkDataDec defaults commonMode modes =
+      [ DataD [] (mkName recordUpper) []
+          (map mkRecord modes')
           [mkName "Show",mkName "Data",mkName "Typeable"]
-      ] ++ map mkDefaultRecord modes
+      ] ++ map mkDefaultRecord modes'
 
       where
+        modes' = map (\(n,fs) -> (n, mergeFlags fs)) modes
+          where
+            mergeFlags flags = nubBy (\f1 f2 -> parsedFlagLong f1 == parsedFlagLong f2) (flags ++ commonFlags)
+            commonFlags = filter notDefault (snd commonMode)
+
+        notDefault = noDef . parsedFlagLong
+          where noDef Nothing  = True
+                noDef (Just f) = f `notElem` ["help","version"]
         mkDefaultRecord (name, flags) = FunD (mkName $ "default" ++ upperName name) [ Clause [] (NormalB (
           foldl AppE (ConE $ mkName $ upperName name) $ take (length flags) defaults
           )) [] ]
         upperName = capitalize . unpack
-        recordUpper = upperName . fst . head $ modes
-        mkField name = (mkName name, NotStrict, ConT ''Text)
+        recordUpper = upperName $ fst commonMode
+        mkField name = (mkName name, NotStrict, ConT ''String)
         mkRecord (name, flags) =
           RecC (mkName $ capitalize $ unpack name) $
           map (mkField . maybe def unpack . parsedFlagLong) flags

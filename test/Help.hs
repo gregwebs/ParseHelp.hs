@@ -14,28 +14,33 @@ main = print =<< processArgs [cmdArgsHelp|
 mkCmdArgs [fromHelp|
   The sample program
 
-sample [OPTIONS]
+sample [COMMAND] ... [OPTIONS]
 
- Common flags
-  -? --help       Display help message
+Common flags
+  -h --help       Display help message
   -V --version    Print version information
+  -w --whom=GUY
 
 sample hello [OPTIONS]
 
-  -w --whom=ITEM
-
+  -t --top  Top of the Morning to you!
 
 sample goodbye [OPTIONS]
+
+  -w --whom=ITEM
+  -s --sianara
+  -c --ciao
 |]
 
 main :: IO ()
 main = do
-  print defaultSample
   print defaultHello
-  print =<< cmdArgs (modes [defaultSample, defaultHello])
-
+  print defaultGoodbye
+  print =<< cmdArgs (modes [defaultHello, defaultGoodbye])
 {-
-  hello = Hello{whom = def}
-  goodbye = Goodbye
-  print =<< cmdArgs (modes [hello, goodbye])
-  -}
+   dist/build/test/test goodbye -s sucker
+
+  Hello {top = "", whom = ""}
+  Goodbye {whom = "", sianara = "", ciao = ""}
+  Goodbye {whom = "", sianara = "sucker", ciao = ""}
+-}
