@@ -9,9 +9,9 @@ It will also be a WYSIWYG was of writing help messages, rather than generating t
 
 I like the CmdArgs technique of using a Record to model the command line.
 So currently there is a CmdArgs backend.
-However CmdArgs is redundant and limiting as a backend, so there may be a different backend in the future.
+However CmdArgs has redundant functionality and is limiting as a backend, so there may be a different backend in the future.
 
-See this example: https://github.com/gregwebs/ParseHelp.hs/blob/master/test/Help.hs
+See [this example](https://github.com/gregwebs/ParseHelp.hs/blob/master/test/Help.hs)
 
 Here is a condensed version:
 
@@ -42,4 +42,7 @@ Running with `goodbye -s sucker` results in:
 
 # Status
 
-It works, as can be seen from the tests. I wouldn't be suprised if the help parser were too fragile for your use case. Let me know.
+It works, as can be seen from the tests.
+[Spitting out help](https://github.com/gregwebs/ParseHelp.hs/blob/master/test/Help.hs#L35)
+will be improved in the future.
+I wouldn't be suprised if the parser is more fragile than you would like. Let me know.
