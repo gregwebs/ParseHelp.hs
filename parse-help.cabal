@@ -5,9 +5,11 @@ author:          Greg Weber <greg@gregweber.info>
 maintainer:      Greg Weber <greg@gregweber.info>
 synopsis:        generate command line arguments from a --help output
 description:     see http://github.com/gregwebs/cmdargs-help
+category:        Console
+license-file:    LICENSE
 
 stability:       Stable
-cabal-version:   >= 1.6
+cabal-version:   >= 1.8
 build-type:      Simple
 homepage:        http://github.com/gregwebs/cmdargs-help
 
@@ -21,10 +23,14 @@ library
                  , file-location
                  , template-haskell
   exposed-modules: System.Console.ParseHelp
-  ghc-options: -Wall -Werror
+  ghc-options: -Wall
 
 test-suite test
     type:          exitcode-stdio-1.0
     main-is:       Help.hs
     hs-source-dirs: ., test
     build-depends: cmdargs
+
+source-repository head
+  type:     git
+  location: http://github.com/gregwebs/cmdargs-help
