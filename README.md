@@ -38,11 +38,12 @@ Basically we are going about command line parsing backwards: normally you use Ha
 
 This library has the downside of requiring TemplateHaskell and being a more magical.
 The upside is a DRY and pure (as opposed to the default CmdArgs interface) way to interface with the command line.
-It will also be a WYSIWYG was of writing help messages, rather than generating them from code.
+It is also a WYSIWYG was of writing help messages, rather than generating them from code.
 
 I like the CmdArgs technique of using a Record to model the command line.
 So currently there is a CmdArgs backend.
 However CmdArgs has redundant functionality and is limiting as a backend, so there may be a different backend in the future.
+Note that there is no package dependency on cmdargs. There is only a data-default dependency. You call cmdargs functions in your own code.
 
 [Spitting out help](https://github.com/gregwebs/ParseHelp.hs/blob/master/test/Help.hs#L41)
 will be improved in the future.

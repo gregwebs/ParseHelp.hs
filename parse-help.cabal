@@ -1,5 +1,5 @@
-name:            cmdargs-help
-version:         0.1
+name:            parse-help
+version:         0.0
 license:         BSD3
 author:          Greg Weber <greg@gregweber.info>
 maintainer:      Greg Weber <greg@gregweber.info>
