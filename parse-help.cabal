@@ -14,7 +14,7 @@ build-type:      Simple
 homepage:        http://github.com/gregwebs/cmdargs-help
 
 library
-  build-depends:   base >= 0.4
+  build-depends:   base == 0.4.*
                  , containers
                  , data-default
                  , attoparsec == 0.10.*
