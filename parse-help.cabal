@@ -21,6 +21,7 @@ library
                  , file-location
                  , template-haskell
   exposed-modules: System.Console.ParseHelp
+  ghc-options: -Wall -Werror
 
 test-suite test
     type:          exitcode-stdio-1.0

@@ -1,7 +1,8 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -fno-warn-orphans #-}
 module  System.Console.ParseHelp (
-  parseHelp, ParsedHelp(..), ParsedFlag(..)
+  parseHelp, ParsedHelp, ParsedFlag(..)
 ) where
 
 import Data.Attoparsec.Text
@@ -12,6 +13,7 @@ import Language.Haskell.TH.Lift
 import Prelude hiding (takeWhile)
 
 instance Lift Text where lift = lift . unpack
+
 data ParsedFlag = ParsedFlag {
    parsedFlagShort       :: Maybe Char, 
    parsedFlagLong        :: Maybe Text,
@@ -28,7 +30,7 @@ type ParsedCommonMode = (Text, [ParsedFlag]) -- no mode name
 
 parseHelp :: String -> Either String ParsedHelp
 parseHelp s =
-  case attoParser $ pack s of
+  case attoParser (pack s) of
     Left e -> Left e
     Right pHelp -> Right $ prepareParsedHelp pHelp
 
@@ -67,9 +69,9 @@ attoParser input = parseOnly commandArgs input
           return (name, mode, opts)
 
         betweenChars start end = do
-          char start
+          _ <- char start
           r <- takeWhile1 (/= end)
-          char end
+          _ <- char end
           return r
 
         bracketed = betweenChars '[' ']'
@@ -134,10 +136,12 @@ attoParser input = parseOnly commandArgs input
 
         optional = option ()
 
+{-
         showRest = do
           rest <- restOfLine
           error $ "rest: " ++ (show rest)
         restOfLine = manyTill anyChar eol
+        -}
 
         optionMaybe p = option Nothing $ (fmap Just) p
 
@@ -152,7 +156,7 @@ prepareParsedHelp (description, mCommon, parsedModes) =
   in let modes = map (checkMode name) parsedModes
      in (name, description, common, modes)
   where
-    fst3 (x,y,z) = x
+    fst3 (x,_,_) = x
     checkMode :: Text -> (Text, Text, [ParsedFlag]) -> (Text, [ParsedFlag])
     checkMode commonProgName (progName, mode, flags) =
       if progName /= commonProgName then error $ "inconsistent program name: expected "++unpack commonProgName++", got "++unpack progName

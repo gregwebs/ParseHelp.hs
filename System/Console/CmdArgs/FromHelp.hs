@@ -1,8 +1,7 @@
 {-# OPTIONS_GHC -fno-warn-missing-fields #-}
-{-# LANGUAGE TemplateHaskell, DeriveDataTypeable, OverloadedStrings #-}
+{-# LANGUAGE TemplateHaskell, QuasiQuotes, DeriveDataTypeable, OverloadedStrings #-}
 module  System.Console.CmdArgs.FromHelp (
     fromHelp
-  , FromHelpArgs(..)
   , mkCmdArgs
 ) where
 
@@ -17,23 +16,22 @@ import Data.Data (Data)
 import Data.Default (Default(..), def)
 import FileLocation (debug)
 import Data.List (nubBy)
+import System.Environment (getArgs)
 
 fromHelp :: QuasiQuoter
-fromHelp = QuasiQuoter { quoteExp = lift . parseHelp }
+fromHelp = QuasiQuoter { quoteExp = \s -> lift (s, parseHelp s) }
 
-data FromHelpArgs = FromHelpArgs {hello::String} deriving (Show, Data, Typeable)
-      -- [| cmdArgs_ $ record (FromHelpArgs def) [hello := def += help "help"]  :: IO FromHelpArgs|]
+-- instance Default Text where def = T.empty
 
-instance Default Text where def = T.empty
-
-mkCmdArgs :: Either String ParsedHelp -> Q [Dec]
-mkCmdArgs s =
-  case s of
+mkCmdArgs :: (String, Either String ParsedHelp) -> Q [Dec]
+mkCmdArgs (orig, res) =
+  case res of
     Left e -> error $ show e
     Right (progName, mSummary, common_flags, mode_flags) -> do
+      help <- [| orig |]
       f <- [| def |]
-      return $ mkDataDec
-        (cycle [f]) (progName, common_flags) mode_flags
+      return $ (FunD (mkName "helpContents") [Clause [] (NormalB help) []]) :
+        mkDataDec (cycle [f]) (progName, common_flags) mode_flags
   where
     mkDataDec :: [Exp] -> (Text, [ParsedFlag]) -> [(Text, [ParsedFlag])] -> [Dec]
     mkDataDec defaults commonMode modes =
