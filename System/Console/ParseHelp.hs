@@ -40,6 +40,7 @@ attoParser :: Text -> Either String (Maybe Text,           -- ^ program descript
 attoParser input = parseOnly commandArgs input
   where
     commandArgs = do
+      optional blankLines
       description <- maybeManyTill anyChar blankLine
       optional blankLines
       common <- optionMaybe commonInvocation
@@ -136,11 +137,13 @@ attoParser input = parseOnly commandArgs input
 
         optional = option ()
 
-{-
+        {-}
         showRest = do
           rest <- restOfLine
           error $ "rest: " ++ (show rest)
         restOfLine = manyTill anyChar eol
+        --}
+{-
         -}
 
         optionMaybe p = option Nothing $ (fmap Just) p

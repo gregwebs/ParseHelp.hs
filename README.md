@@ -47,4 +47,9 @@ Note that there is no package dependency on cmdargs. There is only a data-defaul
 
 [Spitting out help](https://github.com/gregwebs/ParseHelp.hs/blob/master/test/Help.hs#L41)
 will be improved in the future.
-I wouldn't be suprised if the parser is more fragile than you would like. Let me know.
+
+
+# Status
+
+Alpha quality. This project needs some more effort to take it to the next level.
+The parser is more fragile than you would like and features are missing.

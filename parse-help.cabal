@@ -14,7 +14,7 @@ build-type:      Simple
 homepage:        http://github.com/gregwebs/cmdargs-help
 
 library
-  build-depends:   base == 0.4.*
+  build-depends:   base == 4.*
                  , containers
                  , data-default
                  , attoparsec == 0.10.*
@@ -29,7 +29,14 @@ test-suite test
     type:          exitcode-stdio-1.0
     main-is:       Help.hs
     hs-source-dirs: ., test
-    build-depends: cmdargs
+    build-depends: base, cmdargs
+                 , containers
+                 , data-default
+                 , attoparsec == 0.10.*
+                 , th-lift
+                 , text
+                 , file-location
+                 , template-haskell
 
 source-repository head
   type:     git

@@ -30,7 +30,7 @@ mkCmdArgs (orig, res) =
     Right (progName, mSummary, common_flags, mode_flags) -> do
       help <- [| orig |]
       f <- [| def |]
-      return $ (FunD (mkName "helpContents") [Clause [] (NormalB help) []]) :
+      return $ (FunD (mkName $ unpack progName ++ "HelpContents") [Clause [] (NormalB help) []]) :
         mkDataDec (cycle [f]) (progName, common_flags) mode_flags
   where
     mkDataDec :: [Exp] -> (Text, [ParsedFlag]) -> [(Text, [ParsedFlag])] -> [Dec]
