@@ -19,7 +19,7 @@ sample hello [OPTIONS]
 sample goodbye [OPTIONS]
 
   -w --whom=GUY
-  -s --sianara
+  -s --sayonara
   -c --ciao
 |]
 
@@ -28,7 +28,7 @@ main = print =<< cmdArgs (modes [defaultHello, defaultGoodbye])
 The end result is a data structure where each field represents a long flag.
 Running with `goodbye -s sucker` results in:
 
-    Goodbye {whom = "", sianara = "sucker", ciao = ""}
+    Goodbye {whom = "", sayonara = "sucker", ciao = ""}
 
 
 # Explanation
